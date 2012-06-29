@@ -1,0 +1,74 @@
+diff --git a/includes/export.inc b/includes/export.inc
+index e11cf09..fc81fe3 100644
+--- a/includes/export.inc
++++ b/includes/export.inc
+@@ -332,69 +332,7 @@ function ctools_export_load_object($table, $type = 'all', $args = array()) {
+     }
+   }
+ 
+-  // Build the query
+-  $query = "SELECT * FROM {" . $table . "} t__0";
+-  $alias_count = 1;
+-  if (!empty($schema['join'])) {
+-    foreach ($schema['join'] as $join_key => $join) {
+-      $join_schema = drupal_get_schema($join['table']);
+-      if (!empty($join_schema)) {
+-        $query .= ' INNER JOIN {' . $join['table'] . '} t__' . $alias_count . ' ON t__0.' . $join['left_key'] . ' = ' . 't__' . $alias_count . '.' . $join['right_key'];
+-        $alias_count++;
+-        $join_schemas[$join['table']] = $join_schema;
+-        if (!empty($join['extra'])) {
+-          $query .= ' ' . $join['extra'];
+-        }
+-      }
+-    }
+-  }
+-
+-  $conditions = array();
+-  $query_args = array();
+-
+-  // If they passed in names, add them to the query.
+-  if ($type == 'names') {
+-    if (!isset($export['key in table'])) {
+-      $conditions[] = "$export[key] IN (" . db_placeholders($args, $schema['fields'][$export['key']]['type']) . ")";
+-    }
+-    else {
+-      $conditions[] = "$export[key] IN (" . db_placeholders($args, $join_schemas[$export['key in table']]['fields'][$export['key']]['type']) . ")";
+-    }
+-    $query_args = $args;
+-  }
+-  else if ($type == 'conditions') {
+-    foreach ($args as $key => $value) {
+-      if (isset($schema['fields'][$key])) {
+-        $conditions[] = "$key = " . db_type_placeholder($schema['fields'][$key]['type']);
+-        $query_args[] = $value;
+-      }
+-    }
+-  }
+-
+-  // Make a string out of the conditions.
+-  if ($conditions) {
+-    $query .= " WHERE " . implode(' AND ', $conditions);
+-  }
+-
+-  $result = db_query($query, $query_args);
+-
+   $status = variable_get($export['status'], array());
+-  // Unpack the results of the query onto objects and cache them.
+-  while ($data = db_fetch_object($result)) {
+-    $object = _ctools_export_unpack_object($schema, $data, $export['object']);
+-    $object->table = $table;
+-    $object->type = t('Normal');
+-    $object->export_type = EXPORT_IN_DATABASE;
+-    // Determine if default object is enabled or disabled.
+-    if (isset($status[$object->{$export['key']}])) {
+-      $object->disabled = $status[$object->{$export['key']}];
+-    }
+-
+-    $cache[$table][$object->{$export['key']}] = $object;
+-    if ($type == 'conditions') {
+-      $return[$object->{$export['key']}] = $object;
+-    }
+-  }
+ 
+   // @todo Load subrecords.
+ 

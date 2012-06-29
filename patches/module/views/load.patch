@@ -1,0 +1,107 @@
+diff --git a/includes/view.inc b/includes/view.inc
+index c58b43f..9343d01 100644
+--- a/includes/view.inc
++++ b/includes/view.inc
+@@ -1340,49 +1340,7 @@ class view extends views_db_object {
+    * @return A view object or NULL if it was not available.
+    */
+   function &load($arg, $reset = FALSE) {
+-    static $cache = array();
+-
+-    // We want a NULL value to return TRUE here, so we can't use isset() or empty().
+-    if (!array_key_exists($arg, $cache) || $reset) {
+-      $where = (is_numeric($arg) ? "vid =  %d" : "name = '%s'");
+-      $data = db_fetch_object(db_query("SELECT * FROM {views_view} WHERE $where", $arg));
+-      if (empty($data)) {
+-        $cache[$arg] = NULL;
+-      }
+-      else {
+-        $view = new view();
+-        $view->load_row($data);
+-        $view->type = t('Normal');
+-        // Load all of our subtables.
+-        foreach ($view->db_objects() as $key) {
+-          $object_name = "views_$key";
+-          $result = db_query("SELECT * FROM {{$object_name}} WHERE vid = %d ORDER BY position", $view->vid);
+-
+-          while ($data = db_fetch_object($result)) {
+-            $object = new $object_name(FALSE);
+-            $object->load_row($data);
+-
+-            // Because it can get complicated with this much indirection,
+-            // make a shortcut reference.
+-            $location = &$view->$key;
+-
+-            // If we have a basic id field, load the item onto the view based on
+-            // this ID, otherwise push it on.
+-            if (!empty($object->id)) {
+-              $location[$object->id] = $object;
+-            }
+-            else {
+-              $location[] = $object;
+-            }
+-          }
+-        }
+-
+-        $view->loaded = TRUE;
+-        $cache[$arg] = $view;
+-      }
+-    }
+-
+-    return $cache[$arg];
++    return NULL;
+   }
+ 
+   /**
+@@ -1393,50 +1351,7 @@ class view extends views_db_object {
+    * much faster.
+    */
+   function load_views() {
+-    $result = db_query("SELECT DISTINCT v.* FROM {views_view} v");
+-    $views = array();
+-    $vids = array();
+-
+-    // Load all the views.
+-    while ($data = db_fetch_object($result)) {
+-      $view = new view;
+-      $view->load_row($data);
+-      $view->loaded = TRUE;
+-      $view->type = t('Normal');
+-      $views[$view->name] = $view;
+-      $names[$view->vid] = $view->name;
+-    }
+-
+-    // Stop if we didn't get any views.
+-    if (!$views) {
+-      return array();
+-    }
+-
+-    $vids = implode(', ', array_keys($names));
+-    // Now load all the subtables:
+-    foreach (view::db_objects() as $key) {
+-      $object_name = "views_$key";
+-      $result = db_query("SELECT * FROM {{$object_name}} WHERE vid IN ($vids) ORDER BY vid, position");
+-
+-      while ($data = db_fetch_object($result)) {
+-        $object = new $object_name(FALSE);
+-        $object->load_row($data);
+-
+-        // Because it can get complicated with this much indirection,
+-        // make a shortcut reference.
+-        $location = &$views[$names[$object->vid]]->$key;
+-
+-        // If we have a basic id field, load the item onto the view based on
+-        // this ID, otherwise push it on.
+-        if (!empty($object->id)) {
+-          $location[$object->id] = $object;
+-        }
+-        else {
+-          $location[] = $object;
+-        }
+-      }
+-    }
+-    return $views;
++    return array();
+   }
+ 
+   /**
